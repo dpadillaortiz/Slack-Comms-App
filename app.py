@@ -63,10 +63,12 @@ initial_view_blocks = [
         }
     },
     {
-        "type": "divider"
+        "type": "divider",
+        "block_id": "divider_1"
     },
     {
         "type": "context",
+        "block_id": "customization_hint",
         "elements": [
             {
                 "type": "mrkdwn",
@@ -145,7 +147,8 @@ advanced_options_blocks = [
 
 sender_identity_fields = [
     {
-        "type": "divider"
+        "type": "divider",
+        "block_id": "start_sender_identity_fields"
     },
     {
         "type": "input",
@@ -188,13 +191,15 @@ sender_identity_fields = [
         }
     },
     {
-        "type": "divider"
+        "type": "divider",
+        "block_id": "end_sender_identity_fields"
     }
 ]
 
 call_to_action_dropdown = [
     {
-        "type": "divider"
+        "type": "divider",
+        "block_id": "start_call_to_action_dropdown"
     },
     {
         "type": "section",
@@ -202,6 +207,7 @@ call_to_action_dropdown = [
             "type": "mrkdwn",
             "text": "How many in-context call action will you need?"
         },
+        "block_id": "call_to_action_dropdown",
         "accessory": {
             "type": "static_select",
             "placeholder": {
@@ -235,11 +241,12 @@ call_to_action_dropdown = [
                     "value": "value-2"
                 }
             ],
-            "action_id": "static_select-action"
+            "action_id": "call_to_action_dropdown-action"
         }
     },
     {
         "type": "context",
+        "block_id": "cta_buttons_hint",
         "elements": [
             {
                 "type": "plain_text",
