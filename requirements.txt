@@ -1,0 +1,5 @@
+slack-bolt
+slack-cli-hooks
+pytest
+flake8
+black
