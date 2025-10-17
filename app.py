@@ -428,17 +428,6 @@ def handle_call_to_action_checkbox(ack, body, logger):
     ack()
     logger.info(body)
 
-    """
-    TBD
-    existing_state_values = body["view"]["state"]["values"]
-    state = {
-        "customize_sender_identity_selected": existing_state_values["customize_sender_identity"]["customize_sender_identity-action"].get("selected_options", []),
-        "call_to_action_selected": existing_state_values["call_to_action"]["call_to_action-action"].get("selected_options", []),
-        "sender_name_value": existing_state_values.get("sender_name", {}).get("plain_text_input-action", {}).get("value", ""),
-        "icon_url_value": existing_state_values.get("icon_url", {}).get("icon_url-action", {}).get("value", "")
-    }
-
-    """
     advanced_options_blocks_with_cta_only = [*advanced_options_blocks, *call_to_action_dropdown]
     advanced_options_blocks_with_sender_only = [advanced_options_blocks[0], *sender_identity_fields, advanced_options_blocks[1]]
     advanced_options_blocks_with_sender_and_cta = [advanced_options_blocks[0], *sender_identity_fields, advanced_options_blocks[1], *call_to_action_dropdown]
