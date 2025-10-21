@@ -222,7 +222,7 @@ call_to_action_dropdown = [
                         "text": "1",
                         "emoji": True
                     },
-                    "value": "value-0"
+                    "value": "1"
                 },
                 {
                     "text": {
@@ -230,7 +230,7 @@ call_to_action_dropdown = [
                         "text": "2",
                         "emoji": True
                     },
-                    "value": "value-1"
+                    "value": "2"
                 },
                 {
                     "text": {
@@ -238,7 +238,7 @@ call_to_action_dropdown = [
                         "text": "3",
                         "emoji": True
                     },
-                    "value": "value-2"
+                    "value": "3"
                 }
             ],
             "action_id": "call_to_action_dropdown-action"
@@ -262,9 +262,10 @@ cta_buttons = [
         "type": "header",
         "text": {
             "type": "plain_text",
-            "text": "CTA button 1",
+            "text": "CTA Button",
             "emoji": True
-        }
+        },
+        "block_id": "cta_button_header"
     },
     {
         "type": "input",
@@ -272,6 +273,7 @@ cta_buttons = [
             "type": "plain_text_input",
             "action_id": "plain_text_input-action"
         },
+        "block_id": "cta_button_text",
         "label": {
             "type": "plain_text",
             "text": "Button Text",
@@ -285,9 +287,10 @@ cta_buttons = [
     {
         "type": "input",
         "element": {
-            "type": "url_text_input",
-            "action_id": "url_text_input-action"
+            "type": "plain_text_input",
+            "action_id": "plain_text_input-action"
         },
+        "block_id": "cta_button_link",
         "label": {
             "type": "plain_text",
             "text": "Link",
@@ -295,6 +298,24 @@ cta_buttons = [
         }
     }
 ]
+
+def generate_cta_buttons(num_buttons):
+    import copy
+    blocks = []
+    for i in range(num_buttons):
+        cta_buttons_with_unique_block_id = copy.deepcopy(cta_buttons)
+        # header
+        cta_buttons_with_unique_block_id[0]["block_id"] = f"cta_button_header_{i+1}"
+        cta_buttons_with_unique_block_id[0]["text"]["text"] = f"CTA Button {i+1}"
+        # button text input
+        cta_buttons_with_unique_block_id[1]["block_id"] = f"cta_button_text_{i+1}"
+        cta_buttons_with_unique_block_id[1]["label"]["text"] = f"Button Text {i+1}"
+        # button link input
+        cta_buttons_with_unique_block_id[2]["block_id"] = f"cta_button_link_{i+1}"
+        cta_buttons_with_unique_block_id[2]["label"]["text"] = f"Link {i+1}"
+        # append to blocks
+        blocks += cta_buttons_with_unique_block_id
+    return blocks
 
 @app.shortcut("bt_comms_shortcut")
 def open_modal(ack, body, client, logger, shortcut):
@@ -374,9 +395,9 @@ def handle_customize_sender_id_checkbox(ack, body, logger):
     advanced_options_blocks_with_sender_only = [advanced_options_blocks[0], *sender_identity_fields, advanced_options_blocks[1]]
     advanced_options_blocks_with_sender_and_cta = [advanced_options_blocks[0], *sender_identity_fields, advanced_options_blocks[1], *call_to_action_dropdown]
     
-
     customize_sender_identity_selected = body["actions"][0]["selected_options"]
     call_to_action_selected = body["view"]["state"]["values"]["call_to_action"]["call_to_action-action"].get("selected_options", [])
+    cta_buttons = lambda: len(body["view"]["state"]["values"]) > 5
 
     logger.info("--------------------------------\n")
     if not customize_sender_identity_selected:
@@ -384,6 +405,9 @@ def handle_customize_sender_id_checkbox(ack, body, logger):
         if not call_to_action_selected:
             logger.info("CHECKBOX: call_to_action\nSTATUS: FALSE\n")
             blocks = advanced_options_blocks
+        if cta_buttons():
+            logger.info("CTA BUTTONS DETECTED\n")
+            blocks = advanced_options_blocks_with_cta_only + generate_cta_buttons(int((len(body["view"]["state"]["values"]) - 5)/2))
         else:
             logger.info("CHECKBOX: call_to_action\nSTATUS: TRUE\n")
             blocks = advanced_options_blocks_with_cta_only
@@ -476,6 +500,68 @@ def handle_call_to_action_checkbox(ack, body, logger):
             "blocks": blocks
         }
     )
+
+@app.action("call_to_action_dropdown-action")
+def handle_some_action(ack, body, logger):
+    ack()
+    logger.info(body)
+
+    call_to_action_dropdown_selected = body["actions"][0]["selected_option"]
+    call_to_action_requested_buttons = body["actions"][0]["selected_option"]["value"]
+    call_to_action_button_blocks = generate_cta_buttons(int(call_to_action_requested_buttons))
+
+    # Block kit combinations
+    # advanced_options_blocks_with_cta_only = [*advanced_options_blocks, *call_to_action_dropdown]
+    advanced_options_blocks_with_cta_buttons_only = [*advanced_options_blocks, *call_to_action_dropdown, *call_to_action_button_blocks]
+    # advanced_options_blocks_with_sender_only = [advanced_options_blocks[0], *sender_identity_fields, advanced_options_blocks[1]]
+    # advanced_options_blocks_with_sender_and_cta = [advanced_options_blocks[0], *sender_identity_fields, advanced_options_blocks[1], *call_to_action_dropdown]
+    advanced_options_blocks_with_sender_and_cta_buttons = [advanced_options_blocks[0], *sender_identity_fields, advanced_options_blocks[1], *call_to_action_dropdown, *call_to_action_button_blocks]
+    #state
+    customize_sender_identity_selected = body["view"]["state"]["values"]["customize_sender_identity"]["customize_sender_identity-action"].get("selected_options", [])
+
+    if call_to_action_dropdown_selected:
+        if not customize_sender_identity_selected:
+            logger.info("--------------------------------\n")
+            logger.info("CUSTOMIZE SENDER ID unchecked.\n")
+            logger.info(f"CALL TO ACTION DROPDOWN selected option: {call_to_action_dropdown_selected}\n")
+            logger.info(f"REQUESTED NUMBER OF BUTTONS: {call_to_action_requested_buttons}\n")
+            logger.info("Generating corresponding number of CTA button input fields...\n")
+            blocks = advanced_options_blocks_with_cta_buttons_only
+        else:
+            logger.info("--------------------------------\n")
+            logger.info(f"CALL TO ACTION DROPDOWN selected option: {call_to_action_dropdown_selected}\n")
+            logger.info(f"REQUESTED NUMBER OF BUTTONS: {call_to_action_requested_buttons}\n")
+            logger.info("Generating corresponding number of CTA button input fields...\n")
+            blocks = advanced_options_blocks_with_sender_and_cta_buttons
+
+
+    client.views_update(
+        view_id=body["view"]["id"],
+        hash=body["view"]["hash"],
+        view={
+            "private_metadata": "",
+            "notify_on_close": True,
+            "title": {
+                "type": "plain_text",
+                "text": "BT Comms App",
+                "emoji": True
+            },
+            "submit": {
+                "type": "plain_text",
+                "text": "Next",
+                "emoji": True
+            },
+            "type": "modal",
+            "close": {
+                "type": "plain_text",
+                "text": "Go back",
+                "emoji": True
+            },
+            "callback_id": "advanced_options_view",
+            "blocks": blocks
+        }
+    )
+
 
 # Start Bolt app
 if __name__ == "__main__":
