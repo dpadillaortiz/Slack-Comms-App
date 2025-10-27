@@ -397,26 +397,38 @@ def handle_customize_sender_id_checkbox(ack, body, logger):
     
     customize_sender_identity_selected = body["actions"][0]["selected_options"]
     call_to_action_selected = body["view"]["state"]["values"]["call_to_action"]["call_to_action-action"].get("selected_options", [])
-    cta_buttons = lambda: len(body["view"]["state"]["values"]) > 5
+    cta_buttons_selected = lambda: len(body["view"]["state"]["values"]) > 5
 
     logger.info("--------------------------------\n")
     if not customize_sender_identity_selected:
-        logger.info("CHECKBOX: customize_sender_identity\nSTATUS: FALSE\n")
+        logger.info("\nCHECKBOX: customize_sender_identity\nSTATUS: FALSE\n")
         if not call_to_action_selected:
-            logger.info("CHECKBOX: call_to_action\nSTATUS: FALSE\n")
+            logger.info("\nCHECKBOX: call_to_action\nSTATUS: FALSE\n")
+            # blocks = advanced_options_blocks
+        if not cta_buttons_selected:
+            logger.info("\nNO CTA BUTTONS DETECTED\n")
             blocks = advanced_options_blocks
-        if cta_buttons():
-            logger.info("CTA BUTTONS DETECTED\n")
-            blocks = advanced_options_blocks_with_cta_only + generate_cta_buttons(int((len(body["view"]["state"]["values"]) - 5)/2))
         else:
-            logger.info("CHECKBOX: call_to_action\nSTATUS: TRUE\n")
-            blocks = advanced_options_blocks_with_cta_only
+            logger.info("\nCHECKBOX: call_to_action\nSTATUS: TRUE\n")
+            logger.info("\nNO CTA BUTTONS DETECTED\n")
+            #blocks = advanced_options_blocks_with_cta_only
+            blocks = advanced_options_blocks_with_cta_only + generate_cta_buttons(int((len(body["view"]["state"]["values"]) - 5)/2))
     elif not call_to_action_selected:
-        logger.info("CHECKBOX: call_to_action\nSTATUS: FALSE\n")
+        logger.info("\nCHECKBOX: customize_sender_identity\nSTATUS: TRUE\n")
+        logger.info("\nCHECKBOX: call_to_action\nSTATUS: FALSE\n")
         blocks = advanced_options_blocks_with_sender_only
+    elif not cta_buttons_selected:
+        logger.info("\nCHECKBOX: call_to_action\nSTATUS: TRUE\n")
+        logger.info("\nCTA BUTTONS DETECTED\n")
+        blocks = advanced_options_blocks_with_sender_only + generate_cta_buttons(int((len(body["view"]["state"]["values"]) - 5)/2))
     else:
-        logger.info("CHECKBOX: call_to_action\nSTATUS: TRUE\n")
+        logger.info("\nCHECKBOX: customize_sender_identity\nSTATUS: TRUE\n")
+        logger.info("\nCHECKBOX: call_to_action\nSTATUS: TRUE\n")
         blocks = advanced_options_blocks_with_sender_and_cta
+
+
+    
+
     logger.info("--------------------------------\n")
 
     client.views_update(
