@@ -397,38 +397,38 @@ def handle_customize_sender_id_checkbox(ack, body, logger):
     
     customize_sender_identity_selected = body["actions"][0]["selected_options"]
     call_to_action_selected = body["view"]["state"]["values"]["call_to_action"]["call_to_action-action"].get("selected_options", [])
-    cta_buttons_selected = lambda: len(body["view"]["state"]["values"]) > 5
+    
+    call_to_action_buttons_selected = body["view"]["state"]["values"].get("call_to_action_dropdown", None)
 
     logger.info("--------------------------------\n")
-    if not customize_sender_identity_selected:
-        logger.info("\nCHECKBOX: customize_sender_identity\nSTATUS: FALSE\n")
-        if not call_to_action_selected:
-            logger.info("\nCHECKBOX: call_to_action\nSTATUS: FALSE\n")
-            # blocks = advanced_options_blocks
-        if not cta_buttons_selected:
-            logger.info("\nNO CTA BUTTONS DETECTED\n")
-            blocks = advanced_options_blocks
+    if customize_sender_identity_selected:
+        logger.info(f"\n customize_sender_identity_selected: {customize_sender_identity_selected}\n")
+        logger.info("\nCONDITIONAL CHECKS FOR CUSTOMIZE SENDER ID SELECTED\n")
+        logger.info("customize_sender_identity checked.\n")
+        if call_to_action_buttons_selected:
+            logger.info("CTA BUTTONS DETECTED\n")
+            number_of_cta_buttons = body["view"]["state"]["values"].get("call_to_action_dropdown").get("call_to_action_dropdown-action").get("selected_option").get("value", None)
+            logger.info(f"\nNUMBER OF CTA BUTTONS: {number_of_cta_buttons}\n")
+            blocks = advanced_options_blocks_with_sender_and_cta + generate_cta_buttons(int(number_of_cta_buttons))
+        elif call_to_action_selected:
+            logger.info("call_to_action checked.\n")
+            blocks = advanced_options_blocks_with_sender_and_cta
         else:
-            logger.info("\nCHECKBOX: call_to_action\nSTATUS: TRUE\n")
-            logger.info("\nNO CTA BUTTONS DETECTED\n")
-            #blocks = advanced_options_blocks_with_cta_only
-            blocks = advanced_options_blocks_with_cta_only + generate_cta_buttons(int((len(body["view"]["state"]["values"]) - 5)/2))
-    elif not call_to_action_selected:
-        logger.info("\nCHECKBOX: customize_sender_identity\nSTATUS: TRUE\n")
-        logger.info("\nCHECKBOX: call_to_action\nSTATUS: FALSE\n")
-        blocks = advanced_options_blocks_with_sender_only
-    elif not cta_buttons_selected:
-        logger.info("\nCHECKBOX: call_to_action\nSTATUS: TRUE\n")
-        logger.info("\nCTA BUTTONS DETECTED\n")
-        blocks = advanced_options_blocks_with_sender_only + generate_cta_buttons(int((len(body["view"]["state"]["values"]) - 5)/2))
+            blocks = advanced_options_blocks_with_sender_only
+    elif call_to_action_selected:
+        logger.info("\nCONDITIONAL CHECKS FOR CALL TO ACTION SELECTED\n")
+        logger.info("call_to_action checked.\n")
+        if call_to_action_buttons_selected:
+            logger.info("CTA BUTTONS DETECTED\n")
+            number_of_cta_buttons = body["view"]["state"]["values"].get("call_to_action_dropdown").get("call_to_action_dropdown-action").get("selected_option").get("value", None)
+            logger.info(f"\nNUMBER OF CTA BUTTONS: {number_of_cta_buttons}\n")
+            blocks = advanced_options_blocks_with_cta_only + generate_cta_buttons(int(number_of_cta_buttons))
+        else:
+            blocks = advanced_options_blocks_with_cta_only
     else:
-        logger.info("\nCHECKBOX: customize_sender_identity\nSTATUS: TRUE\n")
-        logger.info("\nCHECKBOX: call_to_action\nSTATUS: TRUE\n")
-        blocks = advanced_options_blocks_with_sender_and_cta
-
-
-    
-
+        logger.info("\nCONDITIONAL CHECKS FOR BOTH CHECKBOXES UNCHECKED\n")
+        logger.info("both checkboxes unchecked. removing all extra fields\n")
+        blocks = advanced_options_blocks
     logger.info("--------------------------------\n")
 
     client.views_update(
