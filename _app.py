@@ -65,6 +65,32 @@ initial_view_blocks = [
     {
         "type": "divider",
         "block_id": "divider_1"
+    },
+    {
+        "type": "context",
+        "block_id": "customization_hint",
+        "elements": [
+            {
+                "type": "mrkdwn",
+                "text": "*Click here to customize sender identity and in-context call to action*"
+            }
+        ]
+    },
+    {
+        "type": "actions",
+        "block_id": "advanced_options",
+        "elements": [
+            {
+                "type": "button",
+                "text": {
+                    "type": "plain_text",
+                    "text": "Advanced options",
+                    "emoji": True
+                },
+                "value": "click_me_123",
+                "action_id": "advanced_options-action"
+            }
+        ]
     }
 ]
 
@@ -296,7 +322,6 @@ def open_modal(ack, body, client, logger, shortcut):
     # Acknowledge the shortcut request
     ack()
     logger.info(body)
-    modal_view = [*initial_view_blocks, *advanced_options_blocks]
     # Call the views_open method using the built-in WebClient
     client.views_open(
         trigger_id=shortcut["trigger_id"],
@@ -320,18 +345,55 @@ def open_modal(ack, body, client, logger, shortcut):
             },
             "callback_id": "initial_view",
             "private_metadata": "",
-            "blocks": modal_view
+            "blocks": initial_view_blocks
         }
     )
+
+
+@app.action("advanced_options-action")
+def handle_adv_options_button(ack, body, client, logger):
+    ack()
+    logger.info(body)
+
+    client.views_push(
+        trigger_id=body["trigger_id"],
+        view={
+            "private_metadata": "",
+            "notify_on_close": True,
+            "title": {
+                "type": "plain_text",
+                "text": "BT Comms App",
+                "emoji": True
+            },
+            "submit": {
+                "type": "plain_text",
+                "text": "Next",
+                "emoji": True
+            },
+            "type": "modal",
+            "close": {
+                "type": "plain_text",
+                "text": "Go back",
+                "emoji": True
+            },
+            "callback_id": "advanced_options_view",
+            "blocks": advanced_options_blocks
+        }
+    )
+
+# Handle view closed events for advanced options view
+@app.view_closed("advanced_options_view")
+def handle_view_closed_events(ack, body, logger):
+    ack()
+    logger.info(body)
 
 @app.action("customize_sender_identity-action")
 def handle_customize_sender_id_checkbox(ack, body, logger):
     ack()
     logger.info(body)
-    modal_view = [*initial_view_blocks, *advanced_options_blocks]
-    advanced_options_blocks_with_cta_only = [*initial_view_blocks, *advanced_options_blocks, *call_to_action_dropdown]
-    advanced_options_blocks_with_sender_only = [*initial_view_blocks, advanced_options_blocks[0], *sender_identity_fields, advanced_options_blocks[1]]
-    advanced_options_blocks_with_sender_and_cta = [*initial_view_blocks, advanced_options_blocks[0], *sender_identity_fields, advanced_options_blocks[1], *call_to_action_dropdown]
+    advanced_options_blocks_with_cta_only = [*advanced_options_blocks, *call_to_action_dropdown]
+    advanced_options_blocks_with_sender_only = [advanced_options_blocks[0], *sender_identity_fields, advanced_options_blocks[1]]
+    advanced_options_blocks_with_sender_and_cta = [advanced_options_blocks[0], *sender_identity_fields, advanced_options_blocks[1], *call_to_action_dropdown]
     
     customize_sender_identity_selected = body["actions"][0]["selected_options"]
     call_to_action_selected = body["view"]["state"]["values"]["call_to_action"]["call_to_action-action"].get("selected_options", [])
@@ -366,7 +428,7 @@ def handle_customize_sender_id_checkbox(ack, body, logger):
     else:
         logger.info("\nCONDITIONAL CHECKS FOR BOTH CHECKBOXES UNCHECKED\n")
         logger.info("both checkboxes unchecked. removing all extra fields\n")
-        blocks = modal_view
+        blocks = advanced_options_blocks
     logger.info("--------------------------------\n")
 
     client.views_update(
@@ -374,6 +436,7 @@ def handle_customize_sender_id_checkbox(ack, body, logger):
         hash=body["view"]["hash"],
         view={
             "private_metadata": "",
+            "notify_on_close": True,
             "title": {
                 "type": "plain_text",
                 "text": "BT Comms App",
@@ -387,10 +450,10 @@ def handle_customize_sender_id_checkbox(ack, body, logger):
             "type": "modal",
             "close": {
                 "type": "plain_text",
-                "text": "Cancel",
+                "text": "Go back",
                 "emoji": True
             },
-            "callback_id": "initial_view",
+            "callback_id": "advanced_options_view",
             "blocks": blocks
         }
     )
@@ -401,10 +464,9 @@ def handle_call_to_action_checkbox(ack, body, logger):
     ack()
     logger.info(body)
 
-    modal_view = [*initial_view_blocks, *advanced_options_blocks]
-    advanced_options_blocks_with_cta_only = [*initial_view_blocks, *advanced_options_blocks, *call_to_action_dropdown]
-    advanced_options_blocks_with_sender_only = [*initial_view_blocks, advanced_options_blocks[0], *sender_identity_fields, advanced_options_blocks[1]]
-    advanced_options_blocks_with_sender_and_cta = [*initial_view_blocks, advanced_options_blocks[0], *sender_identity_fields, advanced_options_blocks[1], *call_to_action_dropdown]
+    advanced_options_blocks_with_cta_only = [*advanced_options_blocks, *call_to_action_dropdown]
+    advanced_options_blocks_with_sender_only = [advanced_options_blocks[0], *sender_identity_fields, advanced_options_blocks[1]]
+    advanced_options_blocks_with_sender_and_cta = [advanced_options_blocks[0], *sender_identity_fields, advanced_options_blocks[1], *call_to_action_dropdown]
     
     call_to_action_selected = body["actions"][0]["selected_options"]
     customize_sender_identity_selected = body["view"]["state"]["values"]["customize_sender_identity"]["customize_sender_identity-action"].get("selected_options", [])
@@ -414,7 +476,7 @@ def handle_call_to_action_checkbox(ack, body, logger):
         if not customize_sender_identity_selected:
             logger.info("--------------------------------\n")
             logger.info("also customize_sender_identity is unchecked. removing all extra fields\n")
-            blocks = modal_view
+            blocks = advanced_options_blocks
         else:
             blocks = advanced_options_blocks_with_sender_only
     elif not customize_sender_identity_selected:
@@ -429,6 +491,7 @@ def handle_call_to_action_checkbox(ack, body, logger):
         hash=body["view"]["hash"],
         view={
             "private_metadata": "",
+            "notify_on_close": True,
             "title": {
                 "type": "plain_text",
                 "text": "BT Comms App",
@@ -436,16 +499,16 @@ def handle_call_to_action_checkbox(ack, body, logger):
             },
             "submit": {
                 "type": "plain_text",
-                "text": "Submit",
+                "text": "Next",
                 "emoji": True
             },
             "type": "modal",
             "close": {
                 "type": "plain_text",
-                "text": "Cancel",
+                "text": "Go back",
                 "emoji": True
             },
-            "callback_id": "initial_view",
+            "callback_id": "advanced_options_view",
             "blocks": blocks
         }
     )
@@ -461,10 +524,10 @@ def handle_some_action(ack, body, logger):
 
     # Block kit combinations
     # advanced_options_blocks_with_cta_only = [*advanced_options_blocks, *call_to_action_dropdown]
-    advanced_options_blocks_with_cta_buttons_only = [*initial_view_blocks, *advanced_options_blocks, *call_to_action_dropdown, *call_to_action_button_blocks]
+    advanced_options_blocks_with_cta_buttons_only = [*advanced_options_blocks, *call_to_action_dropdown, *call_to_action_button_blocks]
     # advanced_options_blocks_with_sender_only = [advanced_options_blocks[0], *sender_identity_fields, advanced_options_blocks[1]]
     # advanced_options_blocks_with_sender_and_cta = [advanced_options_blocks[0], *sender_identity_fields, advanced_options_blocks[1], *call_to_action_dropdown]
-    advanced_options_blocks_with_sender_and_cta_buttons = [*initial_view_blocks, advanced_options_blocks[0], *sender_identity_fields, advanced_options_blocks[1], *call_to_action_dropdown, *call_to_action_button_blocks]
+    advanced_options_blocks_with_sender_and_cta_buttons = [advanced_options_blocks[0], *sender_identity_fields, advanced_options_blocks[1], *call_to_action_dropdown, *call_to_action_button_blocks]
     #state
     customize_sender_identity_selected = body["view"]["state"]["values"]["customize_sender_identity"]["customize_sender_identity-action"].get("selected_options", [])
 
@@ -489,6 +552,7 @@ def handle_some_action(ack, body, logger):
         hash=body["view"]["hash"],
         view={
             "private_metadata": "",
+            "notify_on_close": True,
             "title": {
                 "type": "plain_text",
                 "text": "BT Comms App",
@@ -496,24 +560,20 @@ def handle_some_action(ack, body, logger):
             },
             "submit": {
                 "type": "plain_text",
-                "text": "Submit",
+                "text": "Next",
                 "emoji": True
             },
             "type": "modal",
             "close": {
                 "type": "plain_text",
-                "text": "Cancel",
+                "text": "Go back",
                 "emoji": True
             },
-            "callback_id": "initial_view",
+            "callback_id": "advanced_options_view",
             "blocks": blocks
         }
     )
 
-@app.view("advanced_options_view")
-def handle_view_submission_events(ack, body, logger):
-    ack()
-    logger.info(body)
 
 # Start Bolt app
 if __name__ == "__main__":
