@@ -516,8 +516,21 @@ def handle_view_submission_events(ack, body, client, logger, view):
     logger.info(body)
     rich_text_input_value: str = view["state"]["values"]["rich_text_input"]["rich_text_input-action"]["rich_text_value"]["elements"][0]["elements"][0]["text"]
     multi_conversations_selected: list = view["state"]["values"]["multi_conversations_select"]["multi_conversations_select-action"]["selected_conversations"]
-    sender_name_value: str = view["state"]["values"].get("sender_name").get("plain_text_input-action").get("value")
-    icon_url_value: str = view["state"]["values"].get("icon_url").get("icon_url-action").get("value")
+    
+
+    def customize_sender_identity_state(view)->dict|None:
+        customize_sender_identity_selected: list = view["state"]["values"]["customize_sender_identity"]["customize_sender_identity-action"].get("selected_options")
+        if customize_sender_identity_selected:
+            try:
+                sender_name_value: str|None= view["state"]["values"].get("sender_name").get("plain_text_input-action").get("value")
+            except:
+                sender_name_value = None
+            try:
+                icon_url_value: str|None = view["state"]["values"].get("icon_url").get("icon_url-action").get("value")
+            except:
+                icon_url_value = None
+            return {"sender_name": sender_name_value, "icon_url": icon_url_value}
+        return None
 
     def number_of_cta_buttons(view):
         # number_of_cta_buttons = view["state"]["values"].get("call_to_action_dropdown").get("call_to_action_dropdown-action").get("selected_option").get("value")
