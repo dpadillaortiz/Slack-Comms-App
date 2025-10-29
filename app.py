@@ -29,7 +29,7 @@ client = WebClient(
 )
 
 # Initialization
-app = App(token=os.getenv("SLACK_BOT_TOKEN"), client=client)
+app = App(client=client)
 
 initial_view_blocks = [
     {
@@ -269,6 +269,10 @@ cta_buttons = [
             "type": "plain_text",
             "text": "Link",
             "emoji": True
+        },
+        "hint": {
+            "type": "plain_text",
+            "text": "Please provide a valid URL (including http:// or https://)."
         }
     }
 ]
@@ -344,10 +348,13 @@ def handle_customize_sender_id_checkbox(ack, body, logger):
         logger.info("\nCONDITIONAL CHECKS FOR CUSTOMIZE SENDER ID SELECTED\n")
         logger.info("customize_sender_identity checked.\n")
         if call_to_action_buttons_selected:
-            logger.info("CTA BUTTONS DETECTED\n")
-            number_of_cta_buttons = body["view"]["state"]["values"].get("call_to_action_dropdown").get("call_to_action_dropdown-action").get("selected_option").get("value", None)
-            logger.info(f"\nNUMBER OF CTA BUTTONS: {number_of_cta_buttons}\n")
-            blocks = advanced_options_blocks_with_sender_and_cta + generate_cta_buttons(int(number_of_cta_buttons))
+            logger.info("CTA BUTTONS TOGGLE DETECTED\n")
+            try:
+                number_of_cta_buttons = body["view"]["state"]["values"].get("call_to_action_dropdown").get("call_to_action_dropdown-action").get("selected_option").get("value", None)
+                logger.info(f"\nNUMBER OF CTA BUTTONS: {number_of_cta_buttons}\n")
+                blocks = advanced_options_blocks_with_sender_and_cta + generate_cta_buttons(int(number_of_cta_buttons))
+            except:
+                blocks = advanced_options_blocks_with_sender_and_cta
         elif call_to_action_selected:
             logger.info("call_to_action checked.\n")
             blocks = advanced_options_blocks_with_sender_and_cta
@@ -357,10 +364,13 @@ def handle_customize_sender_id_checkbox(ack, body, logger):
         logger.info("\nCONDITIONAL CHECKS FOR CALL TO ACTION SELECTED\n")
         logger.info("call_to_action checked.\n")
         if call_to_action_buttons_selected:
-            logger.info("CTA BUTTONS DETECTED\n")
-            number_of_cta_buttons = body["view"]["state"]["values"].get("call_to_action_dropdown").get("call_to_action_dropdown-action").get("selected_option").get("value", None)
-            logger.info(f"\nNUMBER OF CTA BUTTONS: {number_of_cta_buttons}\n")
-            blocks = advanced_options_blocks_with_cta_only + generate_cta_buttons(int(number_of_cta_buttons))
+            logger.info("CTA BUTTONS TOGGLE DETECTED\n")
+            try:
+                number_of_cta_buttons = body["view"]["state"]["values"].get("call_to_action_dropdown").get("call_to_action_dropdown-action").get("selected_option").get("value", None)
+                logger.info(f"\nNUMBER OF CTA BUTTONS: {number_of_cta_buttons}\n")
+                blocks = advanced_options_blocks_with_cta_only + generate_cta_buttons(int(number_of_cta_buttons))
+            except:
+                blocks = advanced_options_blocks_with_cta_only
         else:
             blocks = advanced_options_blocks_with_cta_only
     else:
@@ -459,13 +469,9 @@ def handle_some_action(ack, body, logger):
     call_to_action_requested_buttons = body["actions"][0]["selected_option"]["value"]
     call_to_action_button_blocks = generate_cta_buttons(int(call_to_action_requested_buttons))
 
-    # Block kit combinations
-    # advanced_options_blocks_with_cta_only = [*advanced_options_blocks, *call_to_action_dropdown]
     advanced_options_blocks_with_cta_buttons_only = [*initial_view_blocks, *advanced_options_blocks, *call_to_action_dropdown, *call_to_action_button_blocks]
-    # advanced_options_blocks_with_sender_only = [advanced_options_blocks[0], *sender_identity_fields, advanced_options_blocks[1]]
-    # advanced_options_blocks_with_sender_and_cta = [advanced_options_blocks[0], *sender_identity_fields, advanced_options_blocks[1], *call_to_action_dropdown]
     advanced_options_blocks_with_sender_and_cta_buttons = [*initial_view_blocks, advanced_options_blocks[0], *sender_identity_fields, advanced_options_blocks[1], *call_to_action_dropdown, *call_to_action_button_blocks]
-    #state
+
     customize_sender_identity_selected = body["view"]["state"]["values"]["customize_sender_identity"]["customize_sender_identity-action"].get("selected_options", [])
 
     if call_to_action_dropdown_selected:
@@ -514,7 +520,7 @@ def handle_some_action(ack, body, logger):
 def handle_view_submission_events(ack, body, client, logger, view):
     ack()
     logger.info(body)
-    rich_text_input_value: str = view["state"]["values"]["rich_text_input"]["rich_text_input-action"]["rich_text_value"]["elements"][0]["elements"][0]["text"]
+    rich_text_input_value: str = view["state"]["values"]["rich_text_input"]["rich_text_input-action"]["rich_text_value"]
     multi_conversations_selected: list = view["state"]["values"]["multi_conversations_select"]["multi_conversations_select-action"]["selected_conversations"]
     
 
@@ -527,40 +533,48 @@ def handle_view_submission_events(ack, body, client, logger, view):
                 sender_name_value = None
             try:
                 icon_url_value: str|None = view["state"]["values"].get("icon_url").get("icon_url-action").get("value")
+
             except:
                 icon_url_value = None
             return {"sender_name": sender_name_value, "icon_url": icon_url_value}
         return None
 
-    def number_of_cta_buttons(view):
-        # number_of_cta_buttons = view["state"]["values"].get("call_to_action_dropdown").get("call_to_action_dropdown-action").get("selected_option").get("value")
+    def generate_cta_button_elements(view):
         call_to_action_dropdown = view["state"]["values"].get("call_to_action_dropdown")
+        logger.info(f"\nHere is the call_to_action_dropdown being passed: {call_to_action_dropdown}\n")
+        logger.info(f"{True if call_to_action_dropdown else False}")
         if call_to_action_dropdown:
             try:
-                return call_to_action_dropdown.get("call_to_action_dropdown-action").get("selected_option").get("value")
-            except:
+                elements = []
+                number_of_cta_buttons = int(call_to_action_dropdown.get("call_to_action_dropdown-action").get("selected_option").get("value"))
+                for i in range(number_of_cta_buttons):
+                    button_text = view["state"]["values"][f"cta_button_text_{i+1}"]["plain_text_input-action"]["value"]
+                    button_link = view["state"]["values"][f"cta_button_link_{i+1}"]["plain_text_input-action"]["value"].strip()
+                    button = {
+                        "type": "actions",
+                        "block_id": f"button_id_{i+1}",
+                        "elements": [
+                            {
+                                "type": "button",
+                                "action_id": f"button_action_{i+1}",
+                                "text": {
+                                   "type": "plain_text",
+                                    "text": button_text,
+                                    "emoji": True
+                                },
+                                "url": button_link
+                            }
+                        ]
+                    }
+                    elements.append(button)
+                logger.info(f"\nHere are the generated CTA elements: {elements}\n")
+                return elements
+            except Exception as e:
+                logger.error(f"Error generating CTA button elements: {e}")
                 return None
-        return None
-    
-    logger.info(f"\nNUMBER OF CTA BUTTONS: {number_of_cta_buttons(view)}\n")
-
-    def construct_cta_elements(num_buttons, view_state):
-        elements = []
-        for i in range(num_buttons):
-            button_text = view_state[f"cta_button_text_{i+1}"]["plain_text_input-action"]["value"]
-            button_link = view_state[f"cta_button_link_{i+1}"]["plain_text_input-action"]["value"].strip()
-            elements.append({
-                "type": "button",
-                "text": {
-                    "type": "plain_text",
-                    "text": button_text,
-                    "emoji": True
-                },
-                "url": button_link
-            })
-        return elements
     
     def send_message_to_conversation(conversation_id:str, blocks:list, sender_name:str=None, icon_url:str=None, cta_elements:list=None):
+        logger.info(f"\nHere are the cta_elements being passed: {cta_elements}\n")
         notification_text = "Message from Slack Communications App"
         message_payload = {
             "channel": conversation_id,
@@ -570,35 +584,43 @@ def handle_view_submission_events(ack, body, client, logger, view):
         if sender_name:
             # Set your bot's user name.
             message_payload["username"] = sender_name
-        if icon_url:
+        elif icon_url:
             # URL to an image to use as the icon for this message.
             message_payload["icon_url"] = icon_url
-        if cta_elements:
+        elif cta_elements:
+            logger.info(f"\nCTA ELEMENTS TO BE ADDED: {cta_elements}\n")
             message_payload["blocks"] = [*blocks, *cta_elements]
 
+        logger.info(f"\nMESSAGE PAYLOAD TO BE SENT: {message_payload}\n")
         client.chat_postMessage(**message_payload)
     
-    for conversation_id in multi_conversations_selected:
-        """
-        cta_elements = None
-        if number_of_cta_buttons:
-            cta_elements = construct_cta_elements(int(number_of_cta_buttons), view["state"]["values"])
-        """
-        send_message_to_conversation(
-            conversation_id=conversation_id,
-            blocks=[
-                {
-                    "type": "section",
-                    "text": {
-                        "type": "mrkdwn",
-                        "text": rich_text_input_value
-                    }
-                }
-            ],
-            sender_name=sender_name_value,
-            icon_url=icon_url_value
-        )
-    
+    # Main Logic
+    buttons = generate_cta_button_elements(view)
+    logging.info(f"\nGENERATED BUTTONS: {buttons}\n")
+    sender_identity = customize_sender_identity_state(view)
+    if sender_identity is not None:
+        for conversation_id in multi_conversations_selected:
+            send_message_to_conversation(
+                conversation_id=conversation_id,
+                blocks=[rich_text_input_value],
+                sender_name=sender_identity["sender_name"],
+                icon_url=sender_identity["icon_url"],
+                cta_elements = buttons
+            )
+    else:
+        for conversation_id in multi_conversations_selected:
+            send_message_to_conversation(
+                conversation_id=conversation_id,
+                blocks=[rich_text_input_value],
+                cta_elements = buttons
+            )
+
+@app.action("button_action_1")
+@app.action("button_action_2")
+@app.action("button_action_3")
+def button_was_clicked(ack, body, logger):
+    ack()
+    logger.info(body)
 
 # Start Bolt app
 if __name__ == "__main__":
