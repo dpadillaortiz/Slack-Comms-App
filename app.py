@@ -510,10 +510,71 @@ def handle_some_action(ack, body, logger):
         }
     )
 
-@app.view("advanced_options_view")
-def handle_view_submission_events(ack, body, logger):
+@app.view("initial_view")
+def handle_view_submission_events(ack, body, client, logger, view):
     ack()
     logger.info(body)
+    rich_text_input_value: str = view["state"]["values"]["rich_text_input"]["rich_text_input-action"]["rich_text_value"]["elements"][0]["elements"][0]["text"]
+    multi_conversations_selected: list = view["state"]["values"]["multi_conversations_select"]["multi_conversations_select-action"]["selected_conversations"]
+    sender_name_value: str = view["state"]["values"].get("sender_name").get("plain_text_input-action").get("value")
+    icon_url_value: str = view["state"]["values"].get("icon_url").get("icon_url-action").get("value")
+    #number_of_cta_buttons = view["state"]["values"].get("call_to_action_dropdown").get("call_to_action_dropdown-action").get("selected_option").get("value")
+
+    def construct_cta_elements(num_buttons, view_state):
+        elements = []
+        for i in range(num_buttons):
+            button_text = view_state[f"cta_button_text_{i+1}"]["plain_text_input-action"]["value"]
+            button_link = view_state[f"cta_button_link_{i+1}"]["plain_text_input-action"]["value"].strip()
+            elements.append({
+                "type": "button",
+                "text": {
+                    "type": "plain_text",
+                    "text": button_text,
+                    "emoji": True
+                },
+                "url": button_link
+            })
+        return elements
+    
+    def send_message_to_conversation(conversation_id:str, blocks:list, sender_name:str=None, icon_url:str=None, cta_elements:list=None):
+        notification_text = "Message from Slack Communications App"
+        message_payload = {
+            "channel": conversation_id,
+            "text": notification_text,
+            "blocks": blocks
+        }
+        if sender_name:
+            # Set your bot's user name.
+            message_payload["username"] = sender_name
+        if icon_url:
+            # URL to an image to use as the icon for this message.
+            message_payload["icon_url"] = icon_url
+        if cta_elements:
+            message_payload["blocks"] = [*blocks, *cta_elements]
+
+        client.chat_postMessage(**message_payload)
+    
+    for conversation_id in multi_conversations_selected:
+        """
+        cta_elements = None
+        if number_of_cta_buttons:
+            cta_elements = construct_cta_elements(int(number_of_cta_buttons), view["state"]["values"])
+        """
+        send_message_to_conversation(
+            conversation_id=conversation_id,
+            blocks=[
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": rich_text_input_value
+                    }
+                }
+            ],
+            sender_name=sender_name_value,
+            icon_url=icon_url_value
+        )
+    
 
 # Start Bolt app
 if __name__ == "__main__":
