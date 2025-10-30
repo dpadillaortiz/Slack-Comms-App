@@ -404,7 +404,6 @@ def handle_customize_sender_id_checkbox(ack, body, logger):
             "blocks": blocks
         }
     )
-    
 
 @app.action("call_to_action-action")
 def handle_call_to_action_checkbox(ack, body, logger):
@@ -461,7 +460,7 @@ def handle_call_to_action_checkbox(ack, body, logger):
     )
 
 @app.action("call_to_action_dropdown-action")
-def handle_some_action(ack, body, logger):
+def handle_call_to_action_dropdown_action(ack, body, logger):
     ack()
     logger.info(body)
 
@@ -572,7 +571,7 @@ def handle_view_submission_events(ack, body, client, logger, view):
                 logger.error(f"Error generating CTA button elements: {e}")
                 return None
     
-    def send_message_to_conversation(conversation_id:str, blocks:list, sender_name:str=None, icon_url:str=None, cta_elements:list=None):
+    def send_message_to_conversation(conversation_id:str, blocks:list, sender_name:str|None=None, icon_url:str|None=None, cta_elements:list|None=None):
         logger.info(f"\nHere are the cta_elements being passed: {cta_elements}\n")
         notification_text = "Message from Slack Communications App"
         message_payload = {
@@ -622,7 +621,7 @@ def button_was_clicked(ack, body, logger):
     logger.info(body)
 
 @app.action("multi_conversations_select-action")
-def handle_some_action(ack, body, logger):
+def multi_conversations_select_action(ack, body, logger):
     ack()
     logger.info(body)
 
