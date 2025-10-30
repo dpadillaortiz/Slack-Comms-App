@@ -4,7 +4,7 @@
       "minor_version": 1
     },
     "display_information": {
-        "name": "This is the app",
+        "name": "Slack Communications App",
         "description": "This is the description.",
         "background_color": "#000000"
     },
@@ -15,12 +15,12 @@
             "messages_tab_read_only_enabled": false
         },
         "bot_user": {
-            "display_name": "BT Comms",
+            "display_name": "Slack Communications App",
             "always_online": false
         },
         "shortcuts": [
             {
-                "name": "Send as BT Comms",
+                "name": "Send message as SCA",
                 "type": "global",
                 "callback_id": "bt_comms_shortcut",
                 "description": "sends windows update messsage to provided users"
@@ -33,7 +33,8 @@
                 "chat:write",
                 "commands",
                 "users:read.email",
-                "users:read"
+                "users:read",
+                "chat:write.customize"
             ]
         }
     },

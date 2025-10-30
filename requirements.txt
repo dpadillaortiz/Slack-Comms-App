@@ -3,5 +3,5 @@ slack-cli-hooks
 pytest
 flake8
 black
-certifi
 python-dotenv
+certifi
