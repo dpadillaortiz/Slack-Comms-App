@@ -533,7 +533,6 @@ def handle_view_submission_events(ack, body, client, logger, view):
                 sender_name_value = None
             try:
                 icon_url_value: str|None = view["state"]["values"].get("icon_url").get("icon_url-action").get("value")
-
             except:
                 icon_url_value = None
             return {"sender_name": sender_name_value, "icon_url": icon_url_value}
@@ -584,10 +583,10 @@ def handle_view_submission_events(ack, body, client, logger, view):
         if sender_name:
             # Set your bot's user name.
             message_payload["username"] = sender_name
-        elif icon_url:
+        if icon_url:
             # URL to an image to use as the icon for this message.
             message_payload["icon_url"] = icon_url
-        elif cta_elements:
+        if cta_elements:
             logger.info(f"\nCTA ELEMENTS TO BE ADDED: {cta_elements}\n")
             message_payload["blocks"] = [*blocks, *cta_elements]
 
@@ -619,6 +618,11 @@ def handle_view_submission_events(ack, body, client, logger, view):
 @app.action("button_action_2")
 @app.action("button_action_3")
 def button_was_clicked(ack, body, logger):
+    ack()
+    logger.info(body)
+
+@app.action("multi_conversations_select-action")
+def handle_some_action(ack, body, logger):
     ack()
     logger.info(body)
 

@@ -33,7 +33,8 @@
                 "chat:write",
                 "commands",
                 "users:read.email",
-                "users:read"
+                "users:read",
+                "chat:write.customize"
             ]
         }
     },
