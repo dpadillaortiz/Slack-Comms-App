@@ -542,7 +542,8 @@ def handle_comms_submission_event(ack, body, client, logger, view):
 
             return 
     except:
-        pass
+        logging.info("No button link to validate for button 1")
+        ack()
     
     def customize_sender_identity_state(view)->dict|None:
         customize_sender_identity_selected: list = view["state"]["values"]["customize_sender_identity"]["customize_sender_identity-action"].get("selected_options")
