@@ -260,9 +260,20 @@ cta_buttons = [
     },
     {
         "type": "input",
+        "dispatch_action": True,
         "element": {
             "type": "plain_text_input",
-            "action_id": "plain_text_input-action"
+            "action_id": "plain_text_input-action",
+            # may need to remove dispatch for submission validation
+            "dispatch_action_config": {
+					"trigger_actions_on": [
+						"on_character_entered"
+                ]
+            },
+            "placeholder": {
+                "type": "plain_text",
+                "text": "Enter a URL"
+            }
         },
         "block_id": "cta_button_link",
         "label": {
@@ -515,14 +526,32 @@ def handle_call_to_action_dropdown_action(ack, body, logger):
         }
     )
 
-@app.view("initial_view")
-def handle_view_submission_events(ack, body, client, logger, view):
+@app.action("plain_text_input-action")
+def handle_some_action(ack, body, logger):
     ack()
+    logger.info(body)
+
+@app.view("initial_view")
+def handle_comms_submission_event(ack, body, client, logger, view):
+    #ack()
     logger.info(body)
     rich_text_input_value: str = view["state"]["values"]["rich_text_input"]["rich_text_input-action"]["rich_text_value"]
     multi_conversations_selected: list = view["state"]["values"]["multi_conversations_select"]["multi_conversations_select-action"]["selected_conversations"]
-    
 
+    try:
+        button_link = view["state"]["values"]["cta_button_link_1"]["plain_text_input-action"]["value"].strip()
+        if not (button_link.startswith("http://") or button_link.startswith("https://")):
+            
+    
+            # If validation fails, return an error payload
+            ack(response_action="errors", errors={
+                "cta_button_link_1": "The selected date must be in the future."
+            })
+
+            return 
+    except:
+        pass
+    
     def customize_sender_identity_state(view)->dict|None:
         customize_sender_identity_selected: list = view["state"]["values"]["customize_sender_identity"]["customize_sender_identity-action"].get("selected_options")
         if customize_sender_identity_selected:
