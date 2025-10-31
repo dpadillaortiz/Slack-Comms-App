@@ -45,6 +45,25 @@ initial_view_blocks = [
             "emoji": True
         }
     },
+    # Gemini provided the conversations select block below. This was not avalilable in Block Kit Builder.
+    {
+        "type": "input",
+        "block_id": "conversation_select_block",
+        "label": {
+            "type": "plain_text",
+            "text": "Choose a conversation:"
+        },
+        "element": {
+            "type": "conversations_select",
+            "placeholder": {
+                "type": "plain_text",
+                "text": "Select a conversation"
+            },
+            "action_id": "conversation_select_action"
+        }
+    },
+
+    # This is the block I generated from Slack Block Kit Builder
     {
         "type": "section",
         "text": {
@@ -533,9 +552,16 @@ def handle_comms_submission_event(ack, body, client, logger, view):
 
     try:
         # add validation for multi_conversations_selected
-        call_to_action_dropdown = view["state"]["values"].get("call_to_action_dropdown")
-        number_of_cta_buttons = int(call_to_action_dropdown.get("call_to_action_dropdown-action").get("selected_option").get("value"))
-        for i in range(number_of_cta_buttons):
+        multi_conversations_selected: list = view["state"]["values"]["multi_conversations_select"]["multi_conversations_select-action"]["selected_conversations"]
+        if not multi_conversations_selected:
+            logging.info("\nNO CONVERSATIONS SELECTED\n")
+            ack(response_action="errors", errors={
+                "multi_conversations_select": "Please select at least one conversation to send the message to."
+            })
+            return
+        # add validation for CTA button links
+        number_of_buttons_selected: int = int(view["state"]["values"]["call_to_action_dropdown"]["call_to_action_dropdown-action"]["selected_option"]["value"])
+        for i in range(number_of_buttons_selected):
             button_link = view["state"]["values"][f"cta_button_link_{i+1}"]["plain_text_input-action"]["value"].strip()
             logging.info(f"\nVALIDATING BUTTON LINK {i+1}: {button_link}\n")
             logging.info(f"\nSTARTS WITH HTTP: {button_link.startswith('http://')}\n")
