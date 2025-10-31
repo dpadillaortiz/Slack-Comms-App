@@ -260,7 +260,6 @@ cta_buttons = [
     },
     {
         "type": "input",
-        "dispatch_action": True,
         "element": {
             "type": "plain_text_input",
             "action_id": "plain_text_input-action",
@@ -533,16 +532,25 @@ def handle_comms_submission_event(ack, body, client, logger, view):
     multi_conversations_selected: list = view["state"]["values"]["multi_conversations_select"]["multi_conversations_select-action"]["selected_conversations"]
 
     try:
-        button_link = view["state"]["values"]["cta_button_link_1"]["plain_text_input-action"]["value"].strip()
-        if not (button_link.startswith("http://") or button_link.startswith("https://")):
-            # If validation fails, return an error payload
-            ack(response_action="errors", errors={
-                "cta_button_link_1": "Please enter a valid URL that starts with http:// or https://"
-            })
+        # add validation for multi_conversations_selected
+        call_to_action_dropdown = view["state"]["values"].get("call_to_action_dropdown")
+        number_of_cta_buttons = int(call_to_action_dropdown.get("call_to_action_dropdown-action").get("selected_option").get("value"))
+        for i in range(number_of_cta_buttons):
+            button_link = view["state"]["values"][f"cta_button_link_{i+1}"]["plain_text_input-action"]["value"].strip()
+            logging.info(f"\nVALIDATING BUTTON LINK {i+1}: {button_link}\n")
+            logging.info(f"\nSTARTS WITH HTTP: {button_link.startswith('http://')}\n")
+            logging.info(f"\nSTARTS WITH HTTPS: {button_link.startswith('https://')}\n")
+            if not (button_link.startswith("http://") or button_link.startswith("https://")):
+                # If validation fails, return an error payload
+                logging.info(f"\nINVALID URL DETECTED FOR BUTTON LINK {i+1}: {button_link}\n")
+                ack(response_action="errors", errors={
+                    f"cta_button_link_{i+1}": "Please enter a valid URL that starts with http:// or https://"
 
-            return 
-    except:
-        logging.info("No button link to validate for button 1")
+                })
+            return
+        ack()
+    except Exception as e:
+        logging.info(f"\n Exception occured: {e}\n")
         ack()
     
     def customize_sender_identity_state(view)->dict|None:
@@ -562,8 +570,7 @@ def handle_comms_submission_event(ack, body, client, logger, view):
     def generate_cta_button_elements(view):
         call_to_action_dropdown = view["state"]["values"].get("call_to_action_dropdown")
         logger.info(f"\nHere is the call_to_action_dropdown being passed: {call_to_action_dropdown}\n")
-        logger.info(f"{True if call_to_action_dropdown else False}")
-        if call_to_action_dropdown:
+        if call_to_action_dropdown and call_to_action_dropdown.get("call_to_action_dropdown-action").get("selected_option"):
             try:
                 elements = []
                 number_of_cta_buttons = int(call_to_action_dropdown.get("call_to_action_dropdown-action").get("selected_option").get("value"))
