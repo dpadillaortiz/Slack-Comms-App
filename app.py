@@ -54,7 +54,7 @@ initial_view_blocks = [
             "text": "Choose a conversation:"
         },
         "element": {
-            "type": "conversations_select",
+            "type": "multi_conversations_select",
             "placeholder": {
                 "type": "plain_text",
                 "text": "Select a conversation"
@@ -551,6 +551,14 @@ def handle_comms_submission_event(ack, body, client, logger, view):
     multi_conversations_selected: list = view["state"]["values"]["multi_conversations_select"]["multi_conversations_select-action"]["selected_conversations"]
 
     try:
+        # add validation for conversation_select_block
+        multi_conversations_selected: list = view["state"]["values"]["conversation_select_block"]["conversation_select_action"]["selected_conversation"]
+        if not multi_conversations_selected:
+            logging.info("\nNO CONVERSATIONS SELECTED\n")
+            ack(response_action="errors", errors={
+                "multi_conversations_select": "Please select at least one conversation to send the message to."
+            })
+            return
         # add validation for multi_conversations_selected
         multi_conversations_selected: list = view["state"]["values"]["multi_conversations_select"]["multi_conversations_select-action"]["selected_conversations"]
         if not multi_conversations_selected:
