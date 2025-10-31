@@ -62,25 +62,6 @@ initial_view_blocks = [
             "action_id": "conversation_select_action"
         }
     },
-
-    # This is the block I generated from Slack Block Kit Builder
-    {
-        "type": "section",
-        "text": {
-            "type": "mrkdwn",
-            "text": "*Send message to:*"
-        },
-        "block_id": "multi_conversations_select",
-        "accessory": {
-            "type": "multi_conversations_select",
-            "placeholder": {
-                "type": "plain_text",
-                "text": "Select conversations",
-                "emoji": True
-            },
-            "action_id": "multi_conversations_select-action"
-        }
-    },
     {
         "type": "divider",
         "block_id": "divider_1"
@@ -548,23 +529,15 @@ def handle_comms_submission_event(ack, body, client, logger, view):
     #ack()
     logger.info(body)
     rich_text_input_value: str = view["state"]["values"]["rich_text_input"]["rich_text_input-action"]["rich_text_value"]
-    multi_conversations_selected: list = view["state"]["values"]["multi_conversations_select"]["multi_conversations_select-action"]["selected_conversations"]
+    # multi_conversations_selected: list = view["state"]["values"]["multi_conversations_select"]["multi_conversations_select-action"]["selected_conversations"]
 
     try:
         # add validation for conversation_select_block
-        multi_conversations_selected: list = view["state"]["values"]["conversation_select_block"]["conversation_select_action"]["selected_conversation"]
+        multi_conversations_selected: list = view["state"]["values"]["conversation_select_block"]["conversation_select_action"]["selected_conversations"]
         if not multi_conversations_selected:
             logging.info("\nNO CONVERSATIONS SELECTED\n")
             ack(response_action="errors", errors={
-                "multi_conversations_select": "Please select at least one conversation to send the message to."
-            })
-            return
-        # add validation for multi_conversations_selected
-        multi_conversations_selected: list = view["state"]["values"]["multi_conversations_select"]["multi_conversations_select-action"]["selected_conversations"]
-        if not multi_conversations_selected:
-            logging.info("\nNO CONVERSATIONS SELECTED\n")
-            ack(response_action="errors", errors={
-                "multi_conversations_select": "Please select at least one conversation to send the message to."
+                "conversation_select_block": "Please select at least one conversation to send the message to."
             })
             return
         # add validation for CTA button links
