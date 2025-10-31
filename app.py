@@ -264,12 +264,6 @@ cta_buttons = [
         "element": {
             "type": "plain_text_input",
             "action_id": "plain_text_input-action",
-            # may need to remove dispatch for submission validation
-            "dispatch_action_config": {
-					"trigger_actions_on": [
-						"on_character_entered"
-                ]
-            },
             "placeholder": {
                 "type": "plain_text",
                 "text": "Enter a URL"
@@ -541,11 +535,9 @@ def handle_comms_submission_event(ack, body, client, logger, view):
     try:
         button_link = view["state"]["values"]["cta_button_link_1"]["plain_text_input-action"]["value"].strip()
         if not (button_link.startswith("http://") or button_link.startswith("https://")):
-            
-    
             # If validation fails, return an error payload
             ack(response_action="errors", errors={
-                "cta_button_link_1": "The selected date must be in the future."
+                "cta_button_link_1": "Please enter a valid URL that starts with http:// or https://"
             })
 
             return 
