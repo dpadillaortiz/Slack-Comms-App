@@ -530,6 +530,35 @@ def handle_comms_submission_event(ack, body, client, logger, view):
     logger.info(body)
     rich_text_input_value: str = view["state"]["values"]["rich_text_input"]["rich_text_input-action"]["rich_text_value"]
 
+    def generate_cta_button_elements(view, number_of_buttons):
+        try:
+            elements = []
+            for i in range(number_of_buttons):
+                button_text = view["state"]["values"][f"cta_button_text_{i+1}"]["plain_text_input-action"]["value"]
+                button_link = view["state"]["values"][f"cta_button_link_{i+1}"]["plain_text_input-action"]["value"].strip()
+                button = {
+                    "type": "actions",
+                    "block_id": f"button_id_{i+1}",
+                    "elements": [
+                        {
+                            "type": "button",
+                            "action_id": f"button_action_{i+1}",
+                            "text": {
+                                "type": "plain_text",
+                                "text": button_text,
+                                "emoji": True
+                            },
+                            "url": button_link
+                        }
+                    ]
+                }
+                elements.append(button)
+            logger.info(f"\nHere are the generated CTA elements: {elements}\n")
+            return elements
+        except Exception as e:
+            logger.error(f"Error generating CTA button elements: {e}")
+            return None
+
     try:
         # add validation for conversation_select_block
         multi_conversations_selected: list = view["state"]["values"]["conversation_select_block"]["conversation_select_action"]["selected_conversations"]
@@ -567,6 +596,8 @@ def handle_comms_submission_event(ack, body, client, logger, view):
         validation successful providing valid urls
         running the code causes an exception when running line 564
         WARNING:root: Exception occured: cannot access local variable 'generate_cta_button_elements' where it is not associated with a value
+        FIXED: 
+        Moved the generate_cta_button_elements function definition above the try block to ensure it's defined before being called.
         """
     except Exception as e:
         logging.warning(f"\n Exception occured: {e}\n")
@@ -574,34 +605,7 @@ def handle_comms_submission_event(ack, body, client, logger, view):
         buttons = None
 
 
-    def generate_cta_button_elements(view, number_of_buttons):
-        try:
-            elements = []
-            for i in range(number_of_buttons):
-                button_text = view["state"]["values"][f"cta_button_text_{i+1}"]["plain_text_input-action"]["value"]
-                button_link = view["state"]["values"][f"cta_button_link_{i+1}"]["plain_text_input-action"]["value"].strip()
-                button = {
-                    "type": "actions",
-                    "block_id": f"button_id_{i+1}",
-                    "elements": [
-                        {
-                            "type": "button",
-                            "action_id": f"button_action_{i+1}",
-                            "text": {
-                                "type": "plain_text",
-                                "text": button_text,
-                                "emoji": True
-                            },
-                            "url": button_link
-                        }
-                    ]
-                }
-                elements.append(button)
-            logger.info(f"\nHere are the generated CTA elements: {elements}\n")
-            return elements
-        except Exception as e:
-            logger.error(f"Error generating CTA button elements: {e}")
-            return None
+    
         
     def customize_sender_identity_state(view)->dict|None:
         customize_sender_identity_selected: list = view["state"]["values"]["customize_sender_identity"]["customize_sender_identity-action"].get("selected_options")
