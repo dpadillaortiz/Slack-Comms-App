@@ -529,7 +529,6 @@ def handle_comms_submission_event(ack, body, client, logger, view):
     #ack()
     logger.info(body)
     rich_text_input_value: str = view["state"]["values"]["rich_text_input"]["rich_text_input-action"]["rich_text_value"]
-    # multi_conversations_selected: list = view["state"]["values"]["multi_conversations_select"]["multi_conversations_select-action"]["selected_conversations"]
 
     try:
         # add validation for conversation_select_block
@@ -540,26 +539,70 @@ def handle_comms_submission_event(ack, body, client, logger, view):
                 "conversation_select_block": "Please select at least one conversation to send the message to."
             })
             return
+        
         # add validation for CTA button links
+        import validators
         number_of_buttons_selected: int = int(view["state"]["values"]["call_to_action_dropdown"]["call_to_action_dropdown-action"]["selected_option"]["value"])
+        logger.info(f"\nNUMBER OF BUTTONS SELECTED: {number_of_buttons_selected}\n")
         for i in range(number_of_buttons_selected):
-            button_link = view["state"]["values"][f"cta_button_link_{i+1}"]["plain_text_input-action"]["value"].strip()
-            logging.info(f"\nVALIDATING BUTTON LINK {i+1}: {button_link}\n")
-            logging.info(f"\nSTARTS WITH HTTP: {button_link.startswith('http://')}\n")
-            logging.info(f"\nSTARTS WITH HTTPS: {button_link.startswith('https://')}\n")
-            if not (button_link.startswith("http://") or button_link.startswith("https://")):
+            button_link_value = view["state"]["values"][f"cta_button_link_{i+1}"]["plain_text_input-action"]["value"].strip()
+            logging.info(f"\nVALIDATING BUTTON LINK {i+1}: {button_link_value}\n")
+            logging.info(f"\nSTARTS WITH HTTP: {button_link_value.startswith('http://')}\n")
+            logging.info(f"\nSTARTS WITH HTTPS: {button_link_value.startswith('https://')}\n")
+            #if not (button_link_value.startswith("http://") or button_link_value.startswith("https://")):
+            if validators.url(button_link_value):
+                pass
+            else:
                 # If validation fails, return an error payload
-                logging.info(f"\nINVALID URL DETECTED FOR BUTTON LINK {i+1}: {button_link}\n")
+                logging.info(f"\nINVALID URL DETECTED FOR BUTTON LINK {i+1}: {button_link_value}\n")
                 ack(response_action="errors", errors={
                     f"cta_button_link_{i+1}": "Please enter a valid URL that starts with http:// or https://"
 
                 })
-            return
+                return
         ack()
+        buttons = generate_cta_button_elements(view, number_of_buttons_selected)
+        """
+        note to self: 
+        validation successful providing valid urls
+        running the code causes an exception when running line 564
+        WARNING:root: Exception occured: cannot access local variable 'generate_cta_button_elements' where it is not associated with a value
+        """
     except Exception as e:
-        logging.info(f"\n Exception occured: {e}\n")
+        logging.warning(f"\n Exception occured: {e}\n")
         ack()
-    
+        buttons = None
+
+
+    def generate_cta_button_elements(view, number_of_buttons):
+        try:
+            elements = []
+            for i in range(number_of_buttons):
+                button_text = view["state"]["values"][f"cta_button_text_{i+1}"]["plain_text_input-action"]["value"]
+                button_link = view["state"]["values"][f"cta_button_link_{i+1}"]["plain_text_input-action"]["value"].strip()
+                button = {
+                    "type": "actions",
+                    "block_id": f"button_id_{i+1}",
+                    "elements": [
+                        {
+                            "type": "button",
+                            "action_id": f"button_action_{i+1}",
+                            "text": {
+                                "type": "plain_text",
+                                "text": button_text,
+                                "emoji": True
+                            },
+                            "url": button_link
+                        }
+                    ]
+                }
+                elements.append(button)
+            logger.info(f"\nHere are the generated CTA elements: {elements}\n")
+            return elements
+        except Exception as e:
+            logger.error(f"Error generating CTA button elements: {e}")
+            return None
+        
     def customize_sender_identity_state(view)->dict|None:
         customize_sender_identity_selected: list = view["state"]["values"]["customize_sender_identity"]["customize_sender_identity-action"].get("selected_options")
         if customize_sender_identity_selected:
@@ -573,42 +616,8 @@ def handle_comms_submission_event(ack, body, client, logger, view):
                 icon_url_value = None
             return {"sender_name": sender_name_value, "icon_url": icon_url_value}
         return None
-
-    def generate_cta_button_elements(view):
-        call_to_action_dropdown = view["state"]["values"].get("call_to_action_dropdown")
-        logger.info(f"\nHere is the call_to_action_dropdown being passed: {call_to_action_dropdown}\n")
-        if call_to_action_dropdown and call_to_action_dropdown.get("call_to_action_dropdown-action").get("selected_option"):
-            try:
-                elements = []
-                number_of_cta_buttons = int(call_to_action_dropdown.get("call_to_action_dropdown-action").get("selected_option").get("value"))
-                for i in range(number_of_cta_buttons):
-                    button_text = view["state"]["values"][f"cta_button_text_{i+1}"]["plain_text_input-action"]["value"]
-                    button_link = view["state"]["values"][f"cta_button_link_{i+1}"]["plain_text_input-action"]["value"].strip()
-                    button = {
-                        "type": "actions",
-                        "block_id": f"button_id_{i+1}",
-                        "elements": [
-                            {
-                                "type": "button",
-                                "action_id": f"button_action_{i+1}",
-                                "text": {
-                                   "type": "plain_text",
-                                    "text": button_text,
-                                    "emoji": True
-                                },
-                                "url": button_link
-                            }
-                        ]
-                    }
-                    elements.append(button)
-                logger.info(f"\nHere are the generated CTA elements: {elements}\n")
-                return elements
-            except Exception as e:
-                logger.error(f"Error generating CTA button elements: {e}")
-                return None
     
     def send_message_to_conversation(conversation_id:str, blocks:list, sender_name:str|None=None, icon_url:str|None=None, cta_elements:list|None=None):
-        logger.info(f"\nHere are the cta_elements being passed: {cta_elements}\n")
         notification_text = "Message from Slack Communications App"
         message_payload = {
             "channel": conversation_id,
@@ -629,8 +638,7 @@ def handle_comms_submission_event(ack, body, client, logger, view):
         client.chat_postMessage(**message_payload)
     
     # Main Logic
-    buttons = generate_cta_button_elements(view)
-    logging.info(f"\nGENERATED BUTTONS: {buttons}\n")
+    
     sender_identity = customize_sender_identity_state(view)
     if sender_identity is not None:
         for conversation_id in multi_conversations_selected:
